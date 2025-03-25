@@ -1,0 +1,5 @@
+A simple UUID Version 4 generator for UNIX systems.
+
+Based off RFC 9562.
+
+Uses /dev/urandom as secure random numbers generator.
