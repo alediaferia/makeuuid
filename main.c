@@ -16,9 +16,11 @@ int main() {
     if (random_read == -1) {
         fprintf(stderr, "Unable to read from urandom. Exiting.\n");
         perror(0);
+        close(fd);
         return -1;
     } else if ((unsigned long)random_read < sizeof(uuid_chunks)) {
         fprintf(stderr, "Unable to read enough bytes from urandom. Exiting.\n");
+        close(fd);
         return -1;
     }
     close(fd);
