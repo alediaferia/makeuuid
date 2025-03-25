@@ -9,15 +9,20 @@
 
 uint32_t uuid[] = {0, 0, 0, 0};
 
-int main(int argc, char *argv[]) {
+int main() {
     int fd = open("/dev/urandom", O_RDONLY, O_NONBLOCK);
     if (fd == -1) {
         fprintf(stderr, "Unable to open urandom block device for reading. Exiting.\n");
+        perror(0);
         return -1;
     }
 
     ssize_t r = read(fd, &uuid, sizeof(uuid));
-    if (r < sizeof(uuid)) {
+    if (r == -1) {
+        fprintf(stderr, "Unable to read from urandom. Exiting.\n");
+        perror(0);
+        return -1;
+    } else if ((unsigned long)r < sizeof(uuid)) {
         fprintf(stderr, "Unable to read enough bytes from urandom. Exiting.\n");
         return -1;
     }
