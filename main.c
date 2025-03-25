@@ -1,47 +1,50 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 #include <unistd.h>
 
-uint32_t uuid[] = {0, 0, 0, 0};
-
 int main() {
-    int fd = open("/dev/urandom", O_RDONLY, O_NONBLOCK);
+    int fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
         fprintf(stderr, "Unable to open urandom block device for reading. Exiting.\n");
         perror(0);
         return -1;
     }
 
-    ssize_t r = read(fd, &uuid, sizeof(uuid));
-    if (r == -1) {
+    uint32_t uuid_chunks[4];
+    ssize_t random_read = read(fd, &uuid_chunks, sizeof(uuid_chunks));
+    if (random_read == -1) {
         fprintf(stderr, "Unable to read from urandom. Exiting.\n");
         perror(0);
         return -1;
-    } else if ((unsigned long)r < sizeof(uuid)) {
+    } else if ((unsigned long)random_read < sizeof(uuid_chunks)) {
         fprintf(stderr, "Unable to read enough bytes from urandom. Exiting.\n");
         return -1;
     }
-
     close(fd);
-    
-    /* set version bit */
-    uuid[1] = (uuid[1] & 0xffff0fff) | 0x00004000;
 
+    /* set version bit (4) */
+    uuid_chunks[1] = (uuid_chunks[1] & 0xffff0fff) | 0x00004000;
     /* set the var field */
-    uuid[2] = (uuid[2] & 0x3fffffff) | 0x80000000;
+    uuid_chunks[2] = (uuid_chunks[2] & 0x3fffffff) | 0x80000000;
 
-    /* Print as per ABNF in RFC 9562 */
-    printf("%08x-", uuid[0]);
-    printf("%04x-", (uint16_t)(uuid[1] >> 16));
-    printf("%04x-", (uint16_t)(uuid[1]));
-    printf("%04x-", (uint16_t)(uuid[2] >> 16));
-    printf("%04x", (uint16_t)(uuid[2]));
-    printf("%08x\n", uuid[3]);
+    char output[37];
 
+    int written = snprintf(output, sizeof(output),
+        "%08x-%04x-%04x-%04x-%04x%08x",
+        uuid_chunks[0],
+        (uint16_t)(uuid_chunks[1] >> 16),
+        (uint16_t)(uuid_chunks[1]),
+        (uint16_t)(uuid_chunks[2] >> 16),
+        (uint16_t)(uuid_chunks[2]),
+        uuid_chunks[3]);
+
+    if (written != 36) {
+        fprintf(stderr, "Error writing UUID to output buffer. Exiting.\n");
+        return -1;
+    }
+
+    printf("%s\n", output);
+    
     return 0;
 }
